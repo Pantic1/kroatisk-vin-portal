@@ -66,7 +66,7 @@ export default function Home() {
     ;(async () => {
       try {
         setLoading(true); setError(null)
-        const res = await fetch(`${API_BASE}dashboard/stats?period_days=${periodDays}`)
+        const res = await fetch(`${API_BASE}/dashboard/stats?period_days=${periodDays}`)
         if (res.ok) {
           const data = await res.json()
           if (!cancelled) setStats(data)
