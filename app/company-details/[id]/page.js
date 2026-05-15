@@ -114,6 +114,12 @@ export default function CompanyDetailsPage() {
 
   return (
     <Layout breadcrumbTitleParent="Virksomheder" breadcrumbTitle={company.name}>
+      {/* INFO / KONTAKTER / NOTER TABS - øverst over firmanavn */}
+      <CompanyInfoTabs
+        company={company}
+        onUpdated={(updated) => setCompany(updated)}
+      />
+
       {/* HEADER */}
       <CompanyHeader company={company} stats={stats} />
 
@@ -200,6 +206,367 @@ function StatsCards({ stats }) {
       ))}
     </div>
   )
+}
+
+// =================================================================
+// INFO TABS - Stamdata / Kontakter / Noter
+// =================================================================
+// Bruger PRÆCIS samme markup som create-company:
+//   <div className="widget-tabs">
+//     <ul className="widget-menu-tab"> ... </ul>
+//     <div className="widget-content-tab">
+//       <div className="widget-content-inner active" style={{ display: ... }}>
+//         <fieldset className="mb-24">
+//           <div className="body-title mb-10">Label</div>
+//           <input ... />
+//         </fieldset>
+//       </div>
+//     </div>
+//   </div>
+function CompanyInfoTabs({ company, onUpdated }) {
+  const [tab, setTab] = useState(null)   // null = ingen tab aktiv (alt skjult)
+  const [form, setForm] = useState(() => fromCompany(company))
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+
+  // Klik på en tab: åbn hvis lukket, eller luk hvis allerede åben (toggle)
+  const toggleTab = (n) => setTab(prev => prev === n ? null : n)
+
+  useEffect(() => { setForm(fromCompany(company)) }, [company])
+
+  const setField = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
+
+  const addContact = () => setForm(prev => ({
+    ...prev,
+    contacts: [...prev.contacts, {
+      id: crypto.randomUUID(), _new: true,
+      name: '', email: '', role: '', ownershipPct: undefined,
+    }],
+  }))
+  const removeContact = (id) => setForm(prev => ({
+    ...prev,
+    contacts: prev.contacts.filter(c => c.id !== id),
+  }))
+  const updateContact = (id, patch) => setForm(prev => ({
+    ...prev,
+    contacts: prev.contacts.map(c => c.id === id ? { ...c, ...patch } : c),
+  }))
+
+  const totalOwnership = form.contacts.reduce(
+    (s, c) => s + (Number(c.ownershipPct) || 0), 0,
+  )
+
+  const handleSave = async () => {
+    setMessage('')
+    if (totalOwnership > 100 + 1e-6) {
+      setMessage('Samlet ejerskab må ikke overstige 100%')
+      return
+    }
+    setSaving(true)
+    try {
+      const payload = {
+        name: form.name, cvr: form.cvr,
+        companyType: form.companyType, industry: form.industry,
+        vatRegistered: form.vatRegistered, ean: form.ean,
+        phone: form.phone, email: form.email, website: form.website,
+        address: form.address, zip: form.zip, city: form.city,
+        country: form.country, iban: form.iban, swift: form.swift,
+        notes: form.notes, status: form.status,
+        kontakter: form.contacts.map(c => ({
+          name: c.name, email: c.email, role: c.role,
+          ownershipPct: typeof c.ownershipPct === 'number' ? c.ownershipPct : undefined,
+        })),
+      }
+      const res = await fetch(`${API_BASE}/company/${company.id}`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error(await res.text() || 'Kunne ikke gemme')
+      const updated = await res.json()
+      onUpdated?.(updated)
+      setMessage('Ændringer gemt')
+      setTimeout(() => setMessage(''), 2500)
+    } catch (e) {
+      setMessage(e?.message || 'Der skete en fejl')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form className="form-new-page mb-30" onSubmit={(e) => e.preventDefault()}>
+     <div className="wg-box">
+      <div className="widget-tabs">
+        <ul className="widget-menu-tab">
+          <li className={tab === 1 ? 'item-title active' : 'item-title'} onClick={() => toggleTab(1)}>
+            <span className="inner"><span className="h6">Stamdata</span></span>
+          </li>
+          <li className={tab === 2 ? 'item-title active' : 'item-title'} onClick={() => toggleTab(2)}>
+            <span className="inner"><span className="h6">Kontakter</span></span>
+          </li>
+          <li className={tab === 3 ? 'item-title active' : 'item-title'} onClick={() => toggleTab(3)}>
+            <span className="inner"><span className="h6">Noter</span></span>
+          </li>
+        </ul>
+
+        <div className="widget-content-tab" style={{ display: tab === null ? 'none' : 'block' }}>
+          {/* --- Tab 1: Stamdata --- */}
+          <div className="widget-content-inner" style={{ display: tab === 1 ? 'block' : 'none' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">CVR</div>
+                <input type="text" placeholder="Fx 12345678" value={form.cvr}
+                       onChange={e => setField('cvr', e.target.value.replace(/\D/g, ''))} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">Firmanavn</div>
+                <input type="text" placeholder="Navn" value={form.name}
+                       onChange={e => setField('name', e.target.value)} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">Selskabsform</div>
+                <div className="select">
+                  <select value={form.companyType || ''} onChange={e => setField('companyType', e.target.value)}>
+                    <option value="">—</option>
+                    <option>Enkeltmandsvirksomhed</option>
+                    <option>ApS</option>
+                    <option>Anpartsselskab</option>
+                    <option>A/S</option>
+                    <option>I/S</option>
+                    <option>K/S</option>
+                    <option>IVS</option>
+                    <option>Forening</option>
+                    <option>Andet</option>
+                  </select>
+                </div>
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">Branche (NACE)</div>
+                <input type="text" placeholder="Fx 561010 - Restauranter"
+                       value={form.industry || ''} onChange={e => setField('industry', e.target.value)} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">Telefon</div>
+                <input type="tel" placeholder="+45 …" value={form.phone || ''}
+                       onChange={e => setField('phone', e.target.value)} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">Email</div>
+                <input type="email" placeholder="kontakt@firma.dk" value={form.email || ''}
+                       onChange={e => setField('email', e.target.value)} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">Website</div>
+                <input type="url" placeholder="https://firma.dk" value={form.website || ''}
+                       onChange={e => setField('website', e.target.value)} />
+              </fieldset>
+
+              <fieldset className="mb-24 md:col-span-2">
+                <div className="body-title mb-10">Adresse</div>
+                <input type="text" placeholder="Adresse" value={form.address || ''}
+                       onChange={e => setField('address', e.target.value)} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">Postnr.</div>
+                <input type="text" placeholder="0000" value={form.zip || ''}
+                       onChange={e => setField('zip', e.target.value.replace(/\D/g, ''))} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">By</div>
+                <input type="text" placeholder="By" value={form.city || ''}
+                       onChange={e => setField('city', e.target.value)} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">Land</div>
+                <input type="text" placeholder="Land" value={form.country || ''}
+                       onChange={e => setField('country', e.target.value)} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">EAN-nummer</div>
+                <input type="text" placeholder="(valgfri)" value={form.ean || ''}
+                       onChange={e => setField('ean', e.target.value)} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!form.vatRegistered}
+                         onChange={e => setField('vatRegistered', e.target.checked)} />
+                  <span className="body-title">Momsregistreret</span>
+                </label>
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">IBAN</div>
+                <input type="text" placeholder="DK.." value={form.iban || ''}
+                       onChange={e => setField('iban', e.target.value)} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">SWIFT/BIC</div>
+                <input type="text" placeholder="NDEADKKK" value={form.swift || ''}
+                       onChange={e => setField('swift', e.target.value)} />
+              </fieldset>
+
+              <fieldset className="mb-24">
+                <div className="body-title mb-10">Status</div>
+                <div className="select">
+                  <select value={form.status || 'Lead'} onChange={e => setField('status', e.target.value)}>
+                    <option>Lead</option>
+                    <option>Vundet</option>
+                    <option>Tabt</option>
+                    <option>Draft</option>
+                    <option>Published</option>
+                  </select>
+                </div>
+              </fieldset>
+            </div>
+
+            <div className="flex justify-end gap10 mt-3">
+              {message && <span className="body-text" style={{ marginRight: 'auto' }}>{message}</span>}
+              <button type="button" className="tf-button"
+                      onClick={() => setForm(fromCompany(company))} disabled={saving}>
+                Annuller
+              </button>
+              <button type="button" className="tf-button style-1"
+                      onClick={handleSave} disabled={saving}>
+                {saving ? 'Gemmer…' : 'Gem ændringer'}
+              </button>
+            </div>
+          </div>
+
+          {/* --- Tab 2: Kontakter --- */}
+          <div className="widget-content-inner" style={{ display: tab === 2 ? 'block' : 'none' }}>
+            <div className="flex justify-between items-center mb-16">
+              <div className="body-title">
+                Kontaktperson(er)
+                <span className="body-text" style={{ marginLeft: 8 }}>
+                  · Samlet ejerskab: {totalOwnership.toFixed(2)}%
+                </span>
+              </div>
+              <button type="button" className="tf-button" onClick={addContact}>
+                Tilføj kontakt
+              </button>
+            </div>
+
+            {form.contacts.length === 0 && (
+              <div className="body-text mb-10">Ingen kontakter tilføjet endnu.</div>
+            )}
+
+            <div className="flex flex-col gap-4">
+              {form.contacts.map((c, idx) => (
+                <div key={c.id} className="wg-box">
+                  <div className="body-title mb-10">
+                    Kontakt #{idx + 1}
+                    {c._new && (
+                      <span style={{
+                        marginLeft: 8, fontSize: 10, padding: '2px 6px',
+                        background: '#E5F5E8', color: '#0e7a2b', borderRadius: 4,
+                      }}>NY</span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input type="text" className="mb-8" placeholder="Navn" value={c.name || ''}
+                           onChange={e => updateContact(c.id, { name: e.target.value })} />
+                    <input type="email" className="mb-8" placeholder="Email" value={c.email || ''}
+                           onChange={e => updateContact(c.id, { email: e.target.value })} />
+                    <input type="text" className="mb-8" placeholder="Rolle (fx Indkøb)" value={c.role || ''}
+                           onChange={e => updateContact(c.id, { role: e.target.value })} />
+                    <input type="number" min={0} max={100} step={0.01}
+                           placeholder="% ejerskab" value={c.ownershipPct ?? ''}
+                           onChange={e => updateContact(c.id, {
+                             ownershipPct: e.target.value === '' ? undefined : Number(e.target.value),
+                           })} />
+                  </div>
+                  <div className="flex justify-end mt-3">
+                    <button type="button" className="tf-button style-1"
+                            onClick={() => removeContact(c.id)}>
+                      Fjern
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap10 mt-3">
+              {message && <span className="body-text" style={{ marginRight: 'auto' }}>{message}</span>}
+              <button type="button" className="tf-button"
+                      onClick={() => setForm(fromCompany(company))} disabled={saving}>
+                Annuller
+              </button>
+              <button type="button" className="tf-button style-1"
+                      onClick={handleSave} disabled={saving}>
+                {saving ? 'Gemmer…' : 'Gem ændringer'}
+              </button>
+            </div>
+          </div>
+
+          {/* --- Tab 3: Noter --- */}
+          <div className="widget-content-inner" style={{ display: tab === 3 ? 'block' : 'none' }}>
+            <fieldset className="description mb-24">
+              <div className="body-title mb-10">Interne noter</div>
+              <textarea name="notes" placeholder="Skriv interne noter her…"
+                        value={form.notes || ''}
+                        onChange={e => setField('notes', e.target.value)} />
+            </fieldset>
+
+            <div className="flex justify-end gap10 mt-3">
+              {message && <span className="body-text" style={{ marginRight: 'auto' }}>{message}</span>}
+              <button type="button" className="tf-button"
+                      onClick={() => setForm(fromCompany(company))} disabled={saving}>
+                Annuller
+              </button>
+              <button type="button" className="tf-button style-1"
+                      onClick={handleSave} disabled={saving}>
+                {saving ? 'Gemmer…' : 'Gem ændringer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+     </div>
+    </form>
+  )
+}
+
+// Konverter company-objekt fra API til form-state
+function fromCompany(c) {
+  return {
+    name:          c?.name || '',
+    cvr:           c?.cvr || '',
+    companyType:   c?.company_type || c?.companyType || '',
+    industry:      c?.industry || '',
+    vatRegistered: c?.vat_registered ?? c?.vatRegistered ?? true,
+    ean:           c?.ean || '',
+    phone:         c?.phone || '',
+    email:         c?.email || '',
+    website:       c?.website || '',
+    address:       c?.address || '',
+    zip:           c?.zip || '',
+    city:          c?.city || '',
+    country:       c?.country || 'Danmark',
+    iban:          c?.iban || '',
+    swift:         c?.swift || '',
+    notes:         c?.notes || '',
+    status:        c?.status || 'Lead',
+    contacts: (c?.contacts || []).map(k => ({
+      id:           k.id || crypto.randomUUID(),
+      name:         k.name || '',
+      email:        k.email || '',
+      role:         k.role || '',
+      ownershipPct: k.ownership_pct ?? k.ownershipPct ?? undefined,
+    })),
+  }
 }
 
 // =================================================================
