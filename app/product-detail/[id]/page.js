@@ -40,6 +40,7 @@ export default function ProductDetail1() {
           sale_price: toNumber(data?.sale_price),
           purchase_price: toNumber(data?.purchase_price),
           stock_quantity: toNumber(data?.stock_quantity),
+          qty_per_koli: toNumber(data?.qty_per_koli),
           unit: data?.unit ?? '',
           images: Array.isArray(data?.images) ? data.images : [],
         }
@@ -127,7 +128,9 @@ export default function ProductDetail1() {
               <div className="mt-2 text-sm">
                 Lagerstatus:{' '}
                 {product.stock_quantity > 0 ? (
-                  <span className="text-green-600">På lager ({product.stock_quantity} {product.unit || ''} / {(product.stock_quantity / 12).toFixed(0) + ' Koli'})</span>
+                  <span className="text-green-600">
+                    På lager ({product.stock_quantity} stk{product.qty_per_koli ? ` · ${Math.floor(product.stock_quantity / product.qty_per_koli)} Koli à ${product.qty_per_koli}` : ''})
+                  </span>
                 ) : (
                   <span className="text-red-600">Udsolgt</span>
                 )}

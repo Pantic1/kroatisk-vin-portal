@@ -224,15 +224,22 @@ function StatsCards({ stats }) {
 //     </div>
 //   </div>
 function CompanyInfoTabs({ company, onUpdated }) {
-  const [tab, setTab] = useState(null)   // null = ingen tab aktiv (alt skjult)
+  const [tab, setTab] = useState(null)
   const [form, setForm] = useState(() => fromCompany(company))
+  const [original, setOriginal] = useState(() => fromCompany(company))
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+
+  const isDirty = JSON.stringify(form) !== JSON.stringify(original)
 
   // Klik på en tab: åbn hvis lukket, eller luk hvis allerede åben (toggle)
   const toggleTab = (n) => setTab(prev => prev === n ? null : n)
 
-  useEffect(() => { setForm(fromCompany(company)) }, [company])
+  useEffect(() => {
+    const f = fromCompany(company)
+    setForm(f)
+    setOriginal(f)
+  }, [company])
 
   const setField = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
@@ -273,7 +280,7 @@ function CompanyInfoTabs({ company, onUpdated }) {
         country: form.country, iban: form.iban, swift: form.swift,
         notes: form.notes, status: form.status,
         kontakter: form.contacts.map(c => ({
-          name: c.name, email: c.email, role: c.role,
+          name: c.name, email: c.email, phone: c.phone, role: c.role,
           ownershipPct: typeof c.ownershipPct === 'number' ? c.ownershipPct : undefined,
         })),
       }
@@ -432,17 +439,19 @@ function CompanyInfoTabs({ company, onUpdated }) {
               </fieldset>
             </div>
 
-            <div className="flex justify-end gap10 mt-3">
-              {message && <span className="body-text" style={{ marginRight: 'auto' }}>{message}</span>}
-              <button type="button" className="tf-button"
-                      onClick={() => setForm(fromCompany(company))} disabled={saving}>
-                Annuller
-              </button>
-              <button type="button" className="tf-button style-1"
-                      onClick={handleSave} disabled={saving}>
-                {saving ? 'Gemmer…' : 'Gem ændringer'}
-              </button>
-            </div>
+            {isDirty && (
+              <div className="flex justify-end gap10" style={{ marginTop: 24 }}>
+                {message && <span className="body-text" style={{ marginRight: 'auto' }}>{message}</span>}
+                <button type="button" className="tf-button"
+                        onClick={() => setForm(fromCompany(company))} disabled={saving}>
+                  Annuller
+                </button>
+                <button type="button" className="tf-button style-1"
+                        onClick={handleSave} disabled={saving}>
+                  {saving ? 'Gemmer…' : 'Gem ændringer'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* --- Tab 2: Kontakter --- */}
@@ -463,52 +472,31 @@ function CompanyInfoTabs({ company, onUpdated }) {
               <div className="body-text mb-10">Ingen kontakter tilføjet endnu.</div>
             )}
 
-            <div className="flex flex-col gap-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {form.contacts.map((c, idx) => (
-                <div key={c.id} className="wg-box">
-                  <div className="body-title mb-10">
-                    Kontakt #{idx + 1}
-                    {c._new && (
-                      <span style={{
-                        marginLeft: 8, fontSize: 10, padding: '2px 6px',
-                        background: '#E5F5E8', color: '#0e7a2b', borderRadius: 4,
-                      }}>NY</span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <input type="text" className="mb-8" placeholder="Navn" value={c.name || ''}
-                           onChange={e => updateContact(c.id, { name: e.target.value })} />
-                    <input type="email" className="mb-8" placeholder="Email" value={c.email || ''}
-                           onChange={e => updateContact(c.id, { email: e.target.value })} />
-                    <input type="text" className="mb-8" placeholder="Rolle (fx Indkøb)" value={c.role || ''}
-                           onChange={e => updateContact(c.id, { role: e.target.value })} />
-                    <input type="number" min={0} max={100} step={0.01}
-                           placeholder="% ejerskab" value={c.ownershipPct ?? ''}
-                           onChange={e => updateContact(c.id, {
-                             ownershipPct: e.target.value === '' ? undefined : Number(e.target.value),
-                           })} />
-                  </div>
-                  <div className="flex justify-end mt-3">
-                    <button type="button" className="tf-button style-1"
-                            onClick={() => removeContact(c.id)}>
-                      Fjern
-                    </button>
-                  </div>
-                </div>
+                <ContactCard
+                  key={c.id}
+                  contact={c}
+                  idx={idx}
+                  onUpdate={(patch) => updateContact(c.id, patch)}
+                  onRemove={() => removeContact(c.id)}
+                />
               ))}
             </div>
 
-            <div className="flex justify-end gap10 mt-3">
-              {message && <span className="body-text" style={{ marginRight: 'auto' }}>{message}</span>}
-              <button type="button" className="tf-button"
-                      onClick={() => setForm(fromCompany(company))} disabled={saving}>
-                Annuller
-              </button>
-              <button type="button" className="tf-button style-1"
-                      onClick={handleSave} disabled={saving}>
-                {saving ? 'Gemmer…' : 'Gem ændringer'}
-              </button>
-            </div>
+            {isDirty && (
+              <div className="flex justify-end gap10" style={{ marginTop: 24 }}>
+                {message && <span className="body-text" style={{ marginRight: 'auto' }}>{message}</span>}
+                <button type="button" className="tf-button"
+                        onClick={() => setForm(fromCompany(company))} disabled={saving}>
+                  Annuller
+                </button>
+                <button type="button" className="tf-button style-1"
+                        onClick={handleSave} disabled={saving}>
+                  {saving ? 'Gemmer…' : 'Gem ændringer'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* --- Tab 3: Noter --- */}
@@ -520,22 +508,131 @@ function CompanyInfoTabs({ company, onUpdated }) {
                         onChange={e => setField('notes', e.target.value)} />
             </fieldset>
 
-            <div className="flex justify-end gap10 mt-3">
-              {message && <span className="body-text" style={{ marginRight: 'auto' }}>{message}</span>}
-              <button type="button" className="tf-button"
-                      onClick={() => setForm(fromCompany(company))} disabled={saving}>
-                Annuller
-              </button>
-              <button type="button" className="tf-button style-1"
-                      onClick={handleSave} disabled={saving}>
-                {saving ? 'Gemmer…' : 'Gem ændringer'}
-              </button>
-            </div>
+            {isDirty && (
+              <div className="flex justify-end gap10" style={{ marginTop: 24 }}>
+                {message && <span className="body-text" style={{ marginRight: 'auto' }}>{message}</span>}
+                <button type="button" className="tf-button"
+                        onClick={() => setForm(fromCompany(company))} disabled={saving}>
+                  Annuller
+                </button>
+                <button type="button" className="tf-button style-1"
+                        onClick={handleSave} disabled={saving}>
+                  {saving ? 'Gemmer…' : 'Gem ændringer'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
      </div>
     </form>
+  )
+}
+
+// =================================================================
+// CONTACT CARD
+// =================================================================
+function ContactCard({ contact: c, idx, onUpdate, onRemove }) {
+  const [editing, setEditing] = useState(false)
+
+  return (
+    <div style={{
+      border: '1px solid #eee', borderRadius: 12, overflow: 'hidden',
+      background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+    }}>
+      {/* header row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 16px',
+        background: editing ? '#f8faff' : '#fafafa',
+        borderBottom: editing ? '1px solid #e0e8ff' : '1px solid #f0f0f0',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+            background: `hsl(${((c.name || '?').charCodeAt(0) * 37) % 360} 55% 88%)`,
+            color: `hsl(${((c.name || '?').charCodeAt(0) * 37) % 360} 55% 35%)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 700, fontSize: 13,
+          }}>
+            {(c.name || '?').charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>
+              {c.name || <span style={{ color: '#bbb' }}>Navn ikke angivet</span>}
+              {c._new && (
+                <span style={{
+                  marginLeft: 8, fontSize: 10, padding: '2px 6px',
+                  background: '#E5F5E8', color: '#0e7a2b', borderRadius: 4,
+                }}>NY</span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: '#888' }}>
+              {[c.role, c.email, c.phone].filter(Boolean).join(' · ') || 'Ingen oplysninger'}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => setEditing(e => !e)}
+            style={{
+              padding: '5px 12px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+              border: '1.5px solid #0846A8', color: '#0846A8', background: editing ? '#e8f0fe' : '#fff',
+              cursor: 'pointer',
+            }}
+          >
+            {editing ? 'Luk' : 'Rediger'}
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            style={{
+              padding: '5px 12px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+              border: '1.5px solid #e0e0e0', color: '#c0392b', background: '#fff',
+              cursor: 'pointer',
+            }}
+          >
+            <i className="icon-trash-2" style={{ fontSize: 20, color: '#c0392b' }} />
+          </button>
+        </div>
+      </div>
+
+      {/* edit fields */}
+      {editing && (
+        <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <fieldset>
+            <div className="body-title mb-10" style={{ fontSize: 11 }}>Navn</div>
+            <input type="text" placeholder="Fulde navn" value={c.name || ''}
+                   onChange={e => onUpdate({ name: e.target.value })} />
+          </fieldset>
+          <fieldset>
+            <div className="body-title mb-10" style={{ fontSize: 11 }}>Email</div>
+            <input type="email" placeholder="email@firma.dk" value={c.email || ''}
+                   onChange={e => onUpdate({ email: e.target.value })} />
+          </fieldset>
+          <fieldset>
+            <div className="body-title mb-10" style={{ fontSize: 11 }}>Telefon</div>
+            <input type="tel" placeholder="+45 …" value={c.phone || ''}
+                   onChange={e => onUpdate({ phone: e.target.value })} />
+          </fieldset>
+          <fieldset>
+            <div className="body-title mb-10" style={{ fontSize: 11 }}>Rolle</div>
+            <input type="text" placeholder="Fx Direktør, Indkøb" value={c.role || ''}
+                   onChange={e => onUpdate({ role: e.target.value })} />
+          </fieldset>
+          <fieldset>
+            <div className="body-title mb-10" style={{ fontSize: 11 }}>Ejerskab %</div>
+            <input type="number" min={0} max={100} step={0.01}
+                   placeholder="0" value={c.ownershipPct ?? ''}
+                   onChange={e => onUpdate({
+                     ownershipPct: e.target.value === '' ? undefined : Number(e.target.value),
+                   })} />
+          </fieldset>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -563,6 +660,7 @@ function fromCompany(c) {
       id:           k.id || crypto.randomUUID(),
       name:         k.name || '',
       email:        k.email || '',
+      phone:        k.phone || '',
       role:         k.role || '',
       ownershipPct: k.ownership_pct ?? k.ownershipPct ?? undefined,
     })),
@@ -643,35 +741,53 @@ function RecentOrders({ orders }) {
       {orders.length === 0 ? (
         <div className="body-text">Ingen ordrer endnu.</div>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #e5e5e5' }}>
-              <th style={thStyle('left')}>Ordre</th>
-              <th style={thStyle('left')}>Dato</th>
-              <th style={thStyle('right')}>Total</th>
-              <th style={thStyle('left')}>Status</th>
-              <th style={{ ...thStyle('right'), width: 40 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.slice(0, 10).map((o) => (
-              <tr key={o.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                <td style={tdStyle('left')}><strong>#{o.order_id}</strong></td>
-                <td style={tdStyle('left')}>{formatDate(o.order_date)}</td>
-                <td style={tdStyle('right')}>{formatDKK(o.subtotal_price)}</td>
-                <td style={tdStyle('left')}><StatusPill status={o.status} /></td>
-                <td style={tdStyle('right')}>
-                  <Link href={`/order-detail/${o.id}`} title="Se ordre">
-                    <i className="icon-eye" />
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* header */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '100px 150px 1fr 160px 40px',
+            padding: '0 12px 8px', borderBottom: '2px solid #f0f0f0',
+          }}>
+            <span style={colHead}>Ordre</span>
+            <span style={colHead}>Dato</span>
+            <span style={{ ...colHead, textAlign: 'right' }}>Total</span>
+            <span style={{ ...colHead, paddingLeft: 16 }}>Status</span>
+            <span />
+          </div>
+
+          {orders.slice(0, 10).map((o, i) => (
+            <div
+              key={o.id}
+              style={{
+                display: 'grid', gridTemplateColumns: '100px 150px 1fr 160px 40px',
+                alignItems: 'center',
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: i % 2 === 0 ? '#fafafa' : '#fff',
+                transition: 'background .15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f0f5ff'}
+              onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fafafa' : '#fff'}
+            >
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#1a1a2e' }}>#{o.order_id}</div>
+              <div style={{ fontSize: 12, color: '#888' }}>{formatDate(o.order_date)}</div>
+              <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 13, color: '#1A6B2E' }}>{formatDKK(o.subtotal_price)}</div>
+              <div style={{ paddingLeft: 16 }}><StatusPill status={o.status} /></div>
+              <div style={{ textAlign: 'right' }}>
+                <Link href={`/order-detail/${o.id}`} title="Se ordre" className="item edit">
+                  <i className="icon-eye" style={{ fontSize: 20, color: '#0846A8' }} />
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
+}
+
+const colHead = {
+  fontSize: 11, fontWeight: 700, color: '#999',
+  textTransform: 'uppercase', letterSpacing: 0.5,
 }
 
 const thStyle = (align) => ({
@@ -801,40 +917,37 @@ function PriceTable({ companyId, prices, onUpdated }) {
 
       {error && <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>}
 
-      <div className="table-responsive">
-        <table className="price-table">
-          <thead>
-            <tr>
-              <th>Produkt</th>
-              <th>SKU</th>
-              <th>Std. pris</th>
-              <th>Kundens pris</th>
-              <th>Sidst betalt</th>
-              <th></th>
-            </tr>
-          </thead>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* header */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 100px 130px 160px 130px 40px',
+          padding: '0 12px 8px', borderBottom: '2px solid #f0f0f0',
+        }}>
+          <span style={colHead}>Produkt</span>
+          <span style={colHead}>SKU</span>
+          <span style={{ ...colHead, textAlign: 'right' }}>Std. pris</span>
+          <span style={{ ...colHead, textAlign: 'right' }}>Kundens pris</span>
+          <span style={{ ...colHead, textAlign: 'right' }}>Sidst betalt</span>
+          <span />
+        </div>
 
-          <tbody>
-            {filtered.map((row) => (
-              <PriceRow
-                key={row.product_id}
-                row={row}
-                saving={savingId === row.product_id}
-                onSave={(v) => save(row, v)}
-              />
-            ))}
+        {filtered.map((row, i) => (
+          <PriceRow
+            key={row.product_id}
+            row={row}
+            rowIndex={i}
+            saving={savingId === row.product_id}
+            onSave={(v) => save(row, v)}
+          />
+        ))}
 
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={6} className="empty-row">
-                  {assigned.length === 0
-                    ? 'Ingen produkter tildelt endnu. Klik på "Tildel produkt" for at komme i gang.'
-                    : 'Ingen produkter matcher din søgning.'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        {filtered.length === 0 && (
+          <div style={{ padding: '24px 12px', color: '#aaa', fontSize: 13 }}>
+            {assigned.length === 0
+              ? 'Ingen produkter tildelt endnu. Klik på "Tildel produkt" for at komme i gang.'
+              : 'Ingen produkter matcher din søgning.'}
+          </div>
+        )}
       </div>
 
       {showAssignModal && (
@@ -1022,7 +1135,7 @@ function AssignProductModal({ products, onClose, onAssign }) {
 }
 
 // ---------------- En række i pristabellen ----------------
-function PriceRow({ row, saving, onSave }) {
+function PriceRow({ row, rowIndex, saving, onSave }) {
   const [value, setValue] = useState(
     row.special_price != null ? String(row.special_price) : ''
   )
@@ -1034,29 +1147,54 @@ function PriceRow({ row, saving, onSave }) {
   const commit = () => onSave(value)
 
   const onKey = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      e.currentTarget.blur()
-    }
-
+    if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() }
     if (e.key === 'Escape') {
       setValue(row.special_price != null ? String(row.special_price) : '')
       e.currentTarget.blur()
     }
   }
 
+  const bg = rowIndex % 2 === 0 ? '#fafafa' : '#fff'
+
   return (
-    <tr>
-      <td>
-        <strong>{row.name}</strong>
-      </td>
+    <div
+      style={{
+        display: 'grid', gridTemplateColumns: '1fr 100px 130px 160px 130px 40px',
+        alignItems: 'center',
+        padding: '10px 12px',
+        borderRadius: 10,
+        background: bg,
+        transition: 'background .15s',
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = '#f0f5ff'}
+      onMouseLeave={e => e.currentTarget.style.background = bg}
+    >
+      {/* name + image */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        <div style={{
+          width: 52, height: 52, borderRadius: 8, flexShrink: 0, overflow: 'hidden',
+          background: `hsl(${(row.name.charCodeAt(0) * 37) % 360} 55% 88%)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {row.image_url
+            ? <img src={row.image_url} alt={row.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
+            : <span style={{ fontWeight: 700, fontSize: 18, color: `hsl(${(row.name.charCodeAt(0) * 37) % 360} 55% 35%)` }}>{row.name.charAt(0).toUpperCase()}</span>
+          }
+        </div>
+        <span style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {row.name}
+        </span>
+      </div>
 
-      <td>{row.sku || '—'}</td>
+      {/* SKU */}
+      <div style={{ fontSize: 12, color: '#888' }}>{row.sku || '—'}</div>
 
-      <td>{formatDKK(row.sale_price)}</td>
+      {/* std. price */}
+      <div style={{ fontSize: 13, color: '#555', textAlign: 'right' }}>{formatDKK(row.sale_price)}</div>
 
-      <td>
-        <div className="price-input-wrap">
+      {/* custom price input */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
           <input
             type="number"
             step="0.01"
@@ -1066,36 +1204,46 @@ function PriceRow({ row, saving, onSave }) {
             onChange={(e) => setValue(e.target.value)}
             onBlur={commit}
             onKeyDown={onKey}
-            placeholder={`Std. ${formatDKK(row.sale_price)}`}
-            className={row.has_special ? 'price-input has-special' : 'price-input'}
+            placeholder="—"
+            style={{
+              width: 100, padding: '6px 10px', borderRadius: 8, fontSize: 13,
+              border: row.has_special ? '1.5px solid #1A6B2E' : '1.5px solid #e0e0e0',
+              background: row.has_special ? '#f0faf3' : '#fafafa',
+              fontWeight: row.has_special ? 700 : 400,
+              color: row.has_special ? '#1A6B2E' : '#555',
+              textAlign: 'right', outline: 'none',
+              boxShadow: row.has_special ? '0 0 0 3px rgba(26,107,46,0.08)' : 'none',
+              transition: 'border .15s, box-shadow .15s',
+            }}
           />
-
-          {row.has_special && (
-            <span className="special-badge">SÆR</span>
-          )}
-
-          {saving && <span className="text-xs">…</span>}
+          {saving && <span style={{ position: 'absolute', left: -16, fontSize: 11, color: '#aaa' }}>…</span>}
         </div>
-      </td>
+        {row.has_special && (
+          <span style={{
+            background: '#1A6B2E', color: '#fff',
+            padding: '1px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
+          }}>SÆRPRIS</span>
+        )}
+      </div>
 
-      <td>
-        {row.last_purchase_price != null
-          ? formatDKK(row.last_purchase_price)
-          : '—'}
-      </td>
+      {/* last purchase */}
+      <div style={{ fontSize: 13, color: '#555', textAlign: 'right' }}>
+        {row.last_purchase_price != null ? formatDKK(row.last_purchase_price) : '—'}
+      </div>
 
-      <td className="text-right">
+      {/* trash */}
+      <div style={{ textAlign: 'right' }}>
         <button
           type="button"
           className="item trash"
           title="Nulstil til standardpris"
           disabled={!row.has_special || saving}
           onClick={() => onSave('')}
-          style={{ opacity: row.has_special ? 1 : 0.3 }}
+          style={{ background: 'none', border: 'none', cursor: row.has_special ? 'pointer' : 'default', opacity: row.has_special ? 1 : 0.25 }}
         >
-          <i className="icon-trash-2" />
+          <i className="icon-trash-2" style={{ fontSize: 20, color: '#c0392b' }} />
         </button>
-      </td>
-    </tr>
+      </div>
+    </div>
   )
 }

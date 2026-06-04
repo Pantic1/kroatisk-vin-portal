@@ -70,7 +70,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                           id="width-style1"
                           defaultChecked
                         />
-                        <label htmlFor="width-style1" className>
+                        <label htmlFor="width-style1">
                           <div className="body-title">Full width</div>
                         </label>
                       </div>
@@ -81,7 +81,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                           name="width-style"
                           id="width-style2"
                         />
-                        <label htmlFor="width-style2" className>
+                        <label htmlFor="width-style2">
                           <div className="body-title">Boxed</div>
                         </label>
                       </div>
@@ -100,7 +100,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                           id="menu-style1"
                           defaultChecked
                         />
-                        <label className htmlFor="menu-style1">
+                        <label htmlFor="menu-style1">
                           <div className="body-title">Menu click</div>
                         </label>
                       </div>
@@ -111,7 +111,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                           name="menu-style"
                           id="menu-style2"
                         />
-                        <label className htmlFor="menu-style2">
+                        <label htmlFor="menu-style2">
                           <div className="body-title">Icon hover</div>
                         </label>
                       </div>
@@ -122,7 +122,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                           name="menu-style"
                           id="menu-style3"
                         />
-                        <label className htmlFor="menu-style3">
+                        <label htmlFor="menu-style3">
                           <div className="body-title">Icon default</div>
                         </label>
                       </div>
@@ -139,7 +139,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                           id="menu-position1"
                           defaultChecked
                         />
-                        <label className htmlFor="menu-position1">
+                        <label htmlFor="menu-position1">
                           <div className="body-title">Fixed</div>
                         </label>
                       </div>
@@ -150,7 +150,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                           name="menu-position"
                           id="menu-position2"
                         />
-                        <label className htmlFor="menu-position2">
+                        <label htmlFor="menu-position2">
                           <div className="body-title">Scrollable</div>
                         </label>
                       </div>
@@ -167,7 +167,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                           id="header-positions1"
                           defaultChecked
                         />
-                        <label className htmlFor="header-positions1">
+                        <label htmlFor="header-positions1">
                           <div className="body-title">Fixed</div>
                         </label>
                       </div>
@@ -178,7 +178,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                           name="header-positions"
                           id="header-positions2"
                         />
-                        <label className htmlFor="header-positions2">
+                        <label htmlFor="header-positions2">
                           <div className="body-title">Scrollable</div>
                         </label>
                       </div>
@@ -195,7 +195,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                           id="loader1"
                           defaultChecked
                         />
-                        <label className htmlFor="loader1">
+                        <label htmlFor="loader1">
                           <div className="body-title">Enable</div>
                         </label>
                       </div>
@@ -206,7 +206,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                           name="loader"
                           id="loader2"
                         />
-                        <label className htmlFor="loader2">
+                        <label htmlFor="loader2">
                           <div className="body-title">Disable</div>
                         </label>
                       </div>
@@ -239,7 +239,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                       from below Theme Primary color picker
                     </div>
                   </fieldset>
-                  <fieldset className>
+                  <fieldset>
                     <div className="body-title mb-10">
                       Header Background color
                     </div>
@@ -254,7 +254,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                       from below Theme Primary color picker
                     </div>
                   </fieldset>
-                  <fieldset className>
+                  <fieldset>
                     <div className="body-title mb-10">Theme Primary color</div>
                     <div className="select-colors-theme colors-theme-primary mb-10">
                       <div className="item color-2377FC active default" />
@@ -267,7 +267,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                       </div>
                     </div>
                   </fieldset>
-                  <fieldset className>
+                  <fieldset>
                     <div className="body-title mb-10">
                       Theme Background color
                     </div>
@@ -282,7 +282,7 @@ export default function Offcanvas({ isOffcanvas, handleOffcanvas }) {
                       </div>
                     </div>
                   </fieldset>
-                  <fieldset className>
+                  <fieldset>
                     <div className="body-title mb-10">
                       Menu with background image
                     </div>

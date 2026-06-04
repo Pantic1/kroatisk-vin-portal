@@ -9,6 +9,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL
 export default function ProductList() {
     const [products, setProducts] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -18,6 +19,8 @@ export default function ProductList() {
                 setProducts(data);
             } catch (err) {
                 console.error("Fejl ved hentning af produkter:", err);
+            } finally {
+                setLoading(false);
             }
         };
 
@@ -84,8 +87,27 @@ export default function ProductList() {
                         <li><div className="body-title">Handling</div></li>
                     </ul>
 
+                    {loading ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+                            {[...Array(6)].map((_, i) => (
+                                <div key={i} style={{
+                                    display: 'flex', alignItems: 'center', gap: 14,
+                                    padding: '12px 0', borderBottom: '1px solid #f0f0f0',
+                                }}>
+                                    <div style={{ width: 60, height: 60, borderRadius: 8, background: '#f0f0f0', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0 }} />
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        <div style={{ height: 14, width: '50%', borderRadius: 6, background: '#f0f0f0', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                                        <div style={{ height: 11, width: '30%', borderRadius: 6, background: '#f0f0f0', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                                    </div>
+                                    <div style={{ height: 14, width: 60, borderRadius: 6, background: '#f0f0f0', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                                </div>
+                            ))}
+                            <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
+                        </div>
+                    ) : null}
+
                     <ul className="flex flex-column">
-                        {products
+                        {!loading && products
                             ?.filter((product) =>
                                 product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                 product.sku.toLowerCase().includes(searchTerm.toLowerCase())

@@ -245,6 +245,8 @@ function KpiCards({ stats }) {
 // REVENUE CHART
 // =================================================================
 function RevenueChart({ data }) {
+  const hasData = data.length > 0
+
   const options = useMemo(() => ({
     chart: { type: 'area', toolbar: { show: false }, sparkline: { enabled: false } },
     stroke: { curve: 'smooth', width: 3 },
@@ -256,7 +258,7 @@ function RevenueChart({ data }) {
     colors: ['#1A6B2E'],
     xaxis: {
       type: 'datetime',
-      categories: data.map(d => d.day),
+      categories: data.length > 0 ? data.map(d => d.day) : ['2000-01-01'],
       labels: { format: 'dd MMM' },
     },
     yaxis: {
@@ -270,7 +272,7 @@ function RevenueChart({ data }) {
   }), [data])
 
   const series = useMemo(() => ([
-    { name: 'Omsætning', data: data.map(d => Math.round(d.revenue)) },
+    { name: 'Omsætning', data: data.length > 0 ? data.map(d => Math.round(d.revenue)) : [0] },
   ]), [data])
 
   return (
@@ -278,7 +280,7 @@ function RevenueChart({ data }) {
       <div className="flex items-center justify-between mb-3">
         <h5 style={{ marginBottom: 0 }}>Omsætning seneste 30 dage</h5>
       </div>
-      {data.length === 0 ? (
+      {!hasData ? (
         <div className="body-text" style={{ padding: '40px 0', textAlign: 'center' }}>
           Ingen omsætning at vise endnu.
         </div>
@@ -370,29 +372,72 @@ function TopCustomers({ customers }) {
       {customers.length === 0 ? (
         <div className="body-text">Ingen kunder endnu.</div>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #e5e5e5' }}>
-              <th style={th('left')}>Kunde</th>
-              <th style={th('right')}>Ordrer</th>
-              <th style={th('right')}>Omsætning</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.map(c => (
-              <tr key={c.company_id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                <td style={td('left')}>
-                  <Link href={`/company-details/${c.company_id}`} style={{ color: '#222', textDecoration: 'none' }}>
-                    <strong>{c.name}</strong>
-                  </Link>
-                  {c.cvr && <div style={{ fontSize: 11, color: '#888' }}>CVR: {c.cvr}</div>}
-                </td>
-                <td style={td('right')}>{formatNumber(c.orders_count)}</td>
-                <td style={td('right')}>{formatDKK(c.total_spent)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* header row */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr auto auto',
+            padding: '0 12px 8px', borderBottom: '2px solid #f0f0f0',
+          }}>
+            <span style={colHead}>Kunde</span>
+            <span style={{ ...colHead, minWidth: 64, textAlign: 'right' }}>Ordrer</span>
+            <span style={{ ...colHead, minWidth: 110, textAlign: 'right' }}>Omsætning</span>
+          </div>
+
+          {customers.map((c, i) => (
+            <Link
+              key={c.company_id}
+              href={`/company-details/${c.company_id}`}
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr auto auto',
+                alignItems: 'center',
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: i % 2 === 0 ? '#fafafa' : '#fff',
+                transition: 'background .15s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.background = '#f0f5ff'}
+                onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fafafa' : '#fff'}
+              >
+                {/* avatar + name */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 8,
+                    background: `hsl(${(c.name.charCodeAt(0) * 37) % 360} 55% 88%)`,
+                    color: `hsl(${(c.name.charCodeAt(0) * 37) % 360} 55% 35%)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: 13, flexShrink: 0,
+                  }}>
+                    {c.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {c.name}
+                    </div>
+                    {c.cvr && <div style={{ fontSize: 11, color: '#aaa', marginTop: 1 }}>CVR {c.cvr}</div>}
+                  </div>
+                </div>
+
+                {/* order count badge */}
+                <div style={{ minWidth: 64, textAlign: 'right' }}>
+                  <span style={{
+                    background: '#E5F0FF', color: '#0846A8',
+                    padding: '3px 9px', borderRadius: 20,
+                    fontSize: 12, fontWeight: 600,
+                  }}>
+                    {formatNumber(c.orders_count)}
+                  </span>
+                </div>
+
+                {/* revenue */}
+                <div style={{ minWidth: 110, textAlign: 'right', fontWeight: 700, fontSize: 13, color: '#1A6B2E' }}>
+                  {formatDKK(c.total_spent)}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -411,32 +456,78 @@ function RecentOrdersWidget({ orders }) {
       {orders.length === 0 ? (
         <div className="body-text">Ingen ordrer endnu.</div>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #e5e5e5' }}>
-              <th style={th('left')}>Ordre</th>
-              <th style={th('left')}>Kunde</th>
-              <th style={th('left')}>Dato</th>
-              <th style={th('right')}>Total</th>
-              <th style={th('left')}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map(o => (
-              <tr key={o.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                <td style={td('left')}><strong>#{o.order_id}</strong></td>
-                <td style={td('left')}>
-                  <Link href={`/company-details/${o.company_id}`} style={{ color: '#222', textDecoration: 'none' }}>
-                    {o.company_name || '—'}
-                  </Link>
-                </td>
-                <td style={td('left')}>{formatDate(o.order_date)}</td>
-                <td style={td('right')}>{formatDKK(o.subtotal_price)}</td>
-                <td style={td('left')}><StatusPill status={o.status} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* header row */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '90px 1fr 100px 120px 110px',
+            padding: '0 12px 8px', borderBottom: '2px solid #f0f0f0',
+          }}>
+            <span style={colHead}>Ordre</span>
+            <span style={colHead}>Kunde</span>
+            <span style={colHead}>Dato</span>
+            <span style={{ ...colHead, textAlign: 'right' }}>Total</span>
+            <span style={{ ...colHead, textAlign: 'center' }}>Status</span>
+          </div>
+
+          {orders.map((o, i) => (
+            <div
+              key={o.id}
+              style={{
+                display: 'grid', gridTemplateColumns: '90px 1fr 100px 120px 110px',
+                alignItems: 'center',
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: i % 2 === 0 ? '#fafafa' : '#fff',
+                transition: 'background .15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f0f5ff'}
+              onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fafafa' : '#fff'}
+            >
+              {/* order id */}
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#1a1a2e' }}>
+                #{o.order_id}
+              </div>
+
+              {/* customer */}
+              <div style={{ minWidth: 0 }}>
+                <Link
+                  href={`/company-details/${o.company_id}`}
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {o.company_name && (
+                      <div style={{
+                        width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                        background: `hsl(${((o.company_name || '').charCodeAt(0) * 37) % 360} 55% 88%)`,
+                        color: `hsl(${((o.company_name || '').charCodeAt(0) * 37) % 360} 55% 35%)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 700, fontSize: 11,
+                      }}>
+                        {(o.company_name || '?').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span style={{ fontSize: 13, fontWeight: 500, color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {o.company_name || '—'}
+                    </span>
+                  </div>
+                </Link>
+              </div>
+
+              {/* date */}
+              <div style={{ fontSize: 12, color: '#888' }}>{formatDate(o.order_date)}</div>
+
+              {/* total */}
+              <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 13, color: '#1A6B2E' }}>
+                {formatDKK(o.subtotal_price)}
+              </div>
+
+              {/* status */}
+              <div style={{ textAlign: 'center' }}>
+                <StatusPill status={o.status} />
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -484,6 +575,11 @@ function LowStock({ products }) {
 }
 
 // ---------------- shared table styles ----------------
+const colHead = {
+  fontSize: 11, fontWeight: 700, color: '#999',
+  textTransform: 'uppercase', letterSpacing: 0.5,
+}
+
 const th = (align) => ({
   textAlign: align, padding: '8px 10px', fontSize: 11, fontWeight: 600,
   color: '#666', textTransform: 'uppercase', letterSpacing: 0.4,

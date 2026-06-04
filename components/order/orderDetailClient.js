@@ -15,6 +15,43 @@ const formatDKK = (n) =>
         ? n.toLocaleString("da-DK", { style: "currency", currency: "DKK" })
         : "";
 
+function CopyField({ label, value }) {
+    const [copied, setCopied] = useState(false)
+    const copy = () => {
+        if (!value) return
+        navigator.clipboard.writeText(value)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+    }
+    return (
+        <div
+            onClick={copy}
+            title={value ? 'Klik for at kopiere' : undefined}
+            style={{
+                display: 'flex', flexDirection: 'column', gap: 2,
+                cursor: value ? 'pointer' : 'default',
+                padding: '6px 8px', borderRadius: 7,
+                transition: 'background .15s',
+                background: copied ? '#E5F5E8' : 'transparent',
+            }}
+            onMouseEnter={e => { if (value) e.currentTarget.style.background = copied ? '#E5F5E8' : '#f5f5f5' }}
+            onMouseLeave={e => { e.currentTarget.style.background = copied ? '#E5F5E8' : 'transparent' }}
+        >
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                {label}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 13, color: value ? '#1a1a2e' : '#ccc' }}>{value || '—'}</span>
+                {value && (
+                    <span style={{ fontSize: 11, color: copied ? '#1A6B2E' : '#bbb', flexShrink: 0 }}>
+                        {copied ? '✓ Kopieret' : 'kopier'}
+                    </span>
+                )}
+            </div>
+        </div>
+    )
+}
+
 function fallback(items) {
     return Array.isArray(items) ? items : [];
 }
@@ -38,6 +75,17 @@ export default function OrderDetailClient({ order }) {
     // Map af firmaets særpriser pr. produkt:
     //   { [product_id]: { special_price, effective_price, has_special } }
     const [companyPricesById, setCompanyPricesById] = useState({});
+    const [sellers, setSellers] = useState([]);
+    const [sellerSaving, setSellerSaving] = useState(false);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch(`${API_BASE}/orders/sellers`)
+                if (res.ok) setSellers(await res.json())
+            } catch {}
+        })()
+    }, [])
 
     useEffect(() => {
         (async () => {
@@ -682,6 +730,13 @@ export default function OrderDetailClient({ order }) {
                     </div>
 
                     <div className="summary-item">
+                        <div className="body-text">Sælger</div>
+                        <div className="body-title-2">
+                            {order?.seller?.username || '—'}
+                        </div>
+                    </div>
+
+                    <div className="summary-item">
                         <div className="body-text">Total (uden moms)</div>
 
                         <div className="body-title-2 tf-color-1">
@@ -700,8 +755,19 @@ export default function OrderDetailClient({ order }) {
 
                 <div className="wg-box mb-20 gap10">
                     <div className="body-title">Leveringsadresse</div>
-
                     <div className="body-text">{shippingAddress}</div>
+                </div>
+
+                <div className="wg-box mb-20" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="body-title" style={{ marginBottom: 4 }}>Faktura info</div>
+                    {[
+                        { label: 'Firmanavn', value: order?.company?.name },
+                        { label: 'CVR',       value: order?.company?.cvr },
+                        { label: 'Adresse',   value: shippingAddress },
+                        { label: 'Mail til faktura', value: order?.company?.email },
+                    ].map(({ label, value }) => (
+                        <CopyField key={label} label={label} value={value} />
+                    ))}
                 </div>
 
                 <div className="wg-box mb-20 gap10">
