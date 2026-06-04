@@ -66,24 +66,27 @@ export default function OrderDetailClient({ order }) {
     const [productsById, setProductsById] = useState({});
 
     // ---------- EDIT MODE STATE ----------
-    const [editMode, setEditMode]       = useState(false);
-    const [draftItems, setDraftItems]   = useState([]);  // {product_id, name, image, quantity, price}
+    const [editMode, setEditMode] = useState(false);
+    const [draftItems, setDraftItems] = useState([]);  // {product_id, name, image, quantity, price}
     const [showAddPicker, setShowAddPicker] = useState(false);
-    const [saving, setSaving]           = useState(false);
-    const [saveError, setSaveError]     = useState(null);
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState(null);
 
     // Map af firmaets særpriser pr. produkt:
     //   { [product_id]: { special_price, effective_price, has_special } }
     const [companyPricesById, setCompanyPricesById] = useState({});
     const [sellers, setSellers] = useState([]);
     const [sellerSaving, setSellerSaving] = useState(false);
+    const [notifyUserId, setNotifyUserId] = useState('');
+    const [notifySending, setNotifySending] = useState(false);
+    const [notifyStatus, setNotifyStatus] = useState(null);
 
     useEffect(() => {
         (async () => {
             try {
                 const res = await fetch(`${API_BASE}/orders/sellers`)
                 if (res.ok) setSellers(await res.json())
-            } catch {}
+            } catch { }
         })()
     }, [])
 
@@ -119,9 +122,9 @@ export default function OrderDetailClient({ order }) {
                 const map = {};
                 (Array.isArray(list) ? list : []).forEach((p) => {
                     map[p.product_id] = {
-                        special_price:   p.special_price,
+                        special_price: p.special_price,
                         effective_price: p.effective_price,
-                        has_special:     !!p.has_special,
+                        has_special: !!p.has_special,
                     };
                 });
                 setCompanyPricesById(map);
@@ -280,10 +283,10 @@ export default function OrderDetailClient({ order }) {
         // Initialiser draft fra de nuværende items
         setDraftItems(items.map(it => ({
             product_id: it.productId,
-            name:       it.name,
-            image:      it.image,
-            quantity:   it.qty,
-            price:      it.price,
+            name: it.name,
+            image: it.image,
+            quantity: it.qty,
+            price: it.price,
             purchase_price: it.purchasePrice,
         })));
         setSaveError(null);
@@ -322,11 +325,11 @@ export default function OrderDetailClient({ order }) {
                 return copy;
             }
             return [...prev, {
-                product_id:     product.id,
-                name:           product.name,
-                image:          product.images?.[0]?.image_url || "/images/products/placeholder.png",
-                quantity:       toNumber(product.qty_per_koli) || 12,
-                price:          effectivePrice,
+                product_id: product.id,
+                name: product.name,
+                image: product.images?.[0]?.image_url || "/images/products/placeholder.png",
+                quantity: toNumber(product.qty_per_koli) || 12,
+                price: effectivePrice,
                 purchase_price: toNumber(product.purchase_price),
             }];
         });
@@ -340,14 +343,14 @@ export default function OrderDetailClient({ order }) {
             const payload = {
                 items: draftItems.map(it => ({
                     product_id: it.product_id,
-                    quantity:   toNumber(it.quantity),
-                    price:      toNumber(it.price),
+                    quantity: toNumber(it.quantity),
+                    price: toNumber(it.price),
                 })),
             };
             const res = await fetch(`${API_BASE}/orders/${order.id}/items`, {
-                method:  "PUT",
+                method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body:    JSON.stringify(payload),
+                body: JSON.stringify(payload),
             });
             if (!res.ok) {
                 const txt = await res.text();
@@ -365,14 +368,14 @@ export default function OrderDetailClient({ order }) {
 
     // Totaler bruges både i visning og edit-mode
     const displayItems = editMode ? draftItems.map(d => ({
-        productId:  d.product_id,
-        name:       d.name,
-        image:      d.image,
-        qty:        toNumber(d.quantity),
-        price:      toNumber(d.price),
+        productId: d.product_id,
+        name: d.name,
+        image: d.image,
+        qty: toNumber(d.quantity),
+        price: toNumber(d.price),
         purchasePrice: toNumber(d.purchase_price),
-        total:      toNumber(d.quantity) * toNumber(d.price),
-        profit:     (toNumber(d.price) - toNumber(d.purchase_price)) * toNumber(d.quantity),
+        total: toNumber(d.quantity) * toNumber(d.price),
+        profit: (toNumber(d.price) - toNumber(d.purchase_price)) * toNumber(d.quantity),
     })) : items;
 
     const subtotalExVat = useMemo(
@@ -753,6 +756,8 @@ export default function OrderDetailClient({ order }) {
                     </div>
                 </div>
 
+
+
                 <div className="wg-box mb-20 gap10">
                     <div className="body-title">Leveringsadresse</div>
                     <div className="body-text">{shippingAddress}</div>
@@ -762,21 +767,16 @@ export default function OrderDetailClient({ order }) {
                     <div className="body-title" style={{ marginBottom: 4 }}>Faktura info</div>
                     {[
                         { label: 'Firmanavn', value: order?.company?.name },
-                        { label: 'CVR',       value: order?.company?.cvr },
-                        { label: 'Adresse',   value: shippingAddress },
+                        { label: 'CVR', value: order?.company?.cvr },
+                        { label: 'Adresse', value: shippingAddress },
                         { label: 'Mail til faktura', value: order?.company?.email },
                     ].map(({ label, value }) => (
                         <CopyField key={label} label={label} value={value} />
                     ))}
                 </div>
 
-                <div className="wg-box mb-20 gap10">
-                    <div className="body-title">Betalingsmetode</div>
 
-                    <div className="body-text">{paymentMethod}</div>
-                </div>
-
-                <div className="wg-box gap10">
+                <div className="wg-box gap10 mb-20">
                     <div className="mt-3">
                         <div className="body-title">Leveringsstatus (GLS)</div>
 
@@ -867,6 +867,70 @@ export default function OrderDetailClient({ order }) {
                         })()}
                     </div>
                 </div>
+                <div className="wg-box mb-20" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="body-title" style={{ marginBottom: 4 }}>Send notifikation</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <select
+                            value={notifyUserId}
+                            onChange={e => { setNotifyUserId(e.target.value); setNotifyStatus(null) }}
+                            style={{
+                                padding: '7px 10px', borderRadius: 8, fontSize: 13,
+                                border: '1.5px solid #e0e0e0', background: '#fafafa',
+                                outline: 'none', cursor: 'pointer',
+                            }}
+                        >
+                            <option value="">— Vælg modtager —</option>
+                            {sellers.map(s => (
+                                <option key={s.id} value={s.id}>{s.username} {s.email ? `(${s.email})` : ''}</option>
+                            ))}
+                        </select>
+
+                        <button
+                            type="button"
+                            disabled={!notifyUserId || notifySending}
+                            onClick={async () => {
+                                const seller = sellers.find(s => s.id === notifyUserId)
+                                if (!seller?.email) { setNotifyStatus('error:Ingen email på denne bruger'); return }
+                                setNotifySending(true); setNotifyStatus(null)
+                                try {
+                                    const orderUrl = `${window.location.origin}/order-detail/${order.id}`
+                                    const res = await fetch(`${API_BASE}/notify/notifyOrder`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            to_email: seller.email,
+                                            to_name: seller.username,
+                                            order_url: orderUrl,
+                                            order_id: order.order_id || order.id,
+                                        }),
+                                    })
+                                    setNotifyStatus(res.ok ? 'ok' : 'error:Kunne ikke sende mail')
+                                } catch {
+                                    setNotifyStatus('error:Netværksfejl')
+                                } finally {
+                                    setNotifySending(false)
+                                }
+                            }}
+                            style={{
+                                padding: '7px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                                border: 'none', cursor: notifyUserId ? 'pointer' : 'default',
+                                background: notifyUserId ? '#0846A8' : '#e0e0e0',
+                                color: notifyUserId ? '#fff' : '#aaa',
+                                transition: 'background .15s',
+                            }}
+                        >
+                            {notifySending ? 'Sender…' : 'Send mail'}
+                        </button>
+
+                        {notifyStatus === 'ok' && (
+                            <span style={{ fontSize: 12, color: '#1A6B2E' }}>✓ Mail sendt</span>
+                        )}
+                        {notifyStatus?.startsWith('error:') && (
+                            <span style={{ fontSize: 12, color: '#c0392b' }}>{notifyStatus.slice(6)}</span>
+                        )}
+                    </div>
+                </div>
+
             </div>
 
             {/* ADD-PRODUKT MODAL */}
@@ -891,7 +955,7 @@ function AddProductPicker({ products, companyPrices = {}, onClose, onPick }) {
         const q = query.toLowerCase();
         return (products || []).filter(p =>
             (p.name || "").toLowerCase().includes(q) ||
-            (p.sku  || "").toLowerCase().includes(q)
+            (p.sku || "").toLowerCase().includes(q)
         );
     }, [products, query]);
 
@@ -937,7 +1001,7 @@ function AddProductPicker({ products, companyPrices = {}, onClose, onPick }) {
                     {filtered.map(p => {
                         const cp = companyPrices[p.id];
                         const hasSpecial = !!cp?.has_special;
-                        const effective  = hasSpecial ? toNumber(cp.effective_price) : toNumber(p.sale_price);
+                        const effective = hasSpecial ? toNumber(cp.effective_price) : toNumber(p.sale_price);
                         return (
                             <div
                                 key={p.id}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import './style.css'
@@ -731,6 +731,7 @@ const StatusPill = ({ status }) => {
 }
 
 function RecentOrders({ orders }) {
+  const router = useRouter()
   return (
     <div className="wg-box">
       <div className="flex items-center justify-between mb-3">
@@ -757,6 +758,7 @@ function RecentOrders({ orders }) {
           {orders.slice(0, 10).map((o, i) => (
             <div
               key={o.id}
+              onClick={() => router.push(`/order-detail/${o.id}`)}
               style={{
                 display: 'grid', gridTemplateColumns: '100px 150px 1fr 160px 40px',
                 alignItems: 'center',
@@ -764,6 +766,7 @@ function RecentOrders({ orders }) {
                 borderRadius: 10,
                 background: i % 2 === 0 ? '#fafafa' : '#fff',
                 transition: 'background .15s',
+                cursor: 'pointer',
               }}
               onMouseEnter={e => e.currentTarget.style.background = '#f0f5ff'}
               onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fafafa' : '#fff'}
@@ -773,7 +776,7 @@ function RecentOrders({ orders }) {
               <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 13, color: '#1A6B2E' }}>{formatDKK(o.subtotal_price)}</div>
               <div style={{ paddingLeft: 16 }}><StatusPill status={o.status} /></div>
               <div style={{ textAlign: 'right' }}>
-                <Link href={`/order-detail/${o.id}`} title="Se ordre" className="item edit">
+                <Link href={`/order-detail/${o.id}`} title="Se ordre" className="item edit" onClick={e => e.stopPropagation()}>
                   <i className="icon-eye" style={{ fontSize: 20, color: '#0846A8' }} />
                 </Link>
               </div>
